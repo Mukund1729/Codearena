@@ -1,0 +1,99 @@
+services:
+  # API Gateway
+  - type: web
+    name: codearena-api-gateway
+    runtime: node
+    buildCommand: cd services/api-gateway && npm install
+    startCommand: cd services/api-gateway && npm start
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: SUPABASE_URL
+        value: https://dmttmadjkjydpjhgvnei.supabase.co
+      - key: SUPABASE_ANON_KEY
+        value: sb_publishable_PzuOo_2Xdwpe_oFv_6LMlQ_UpvQmb2m
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: JWT_SECRET
+        value: codearena-secret-key-2024
+      - key: REDIS_HOST
+        value: your-redis-host.render.com
+      - key: REDIS_PORT
+        value: 6379
+      - key: PROBLEM_SERVICE_URL
+        value: https://codearena-problem-service.onrender.com
+      - key: SUBMISSION_SERVICE_URL
+        value: https://codearena-submission-service.onrender.com
+      - key: AI_REVIEW_SERVICE_URL
+        value: https://codearena-ai-review-service.onrender.com
+      - key: WEBSOCKET_SERVICE_URL
+        value: https://codearena-websocket-service.onrender.com
+
+  # Problem Service (Java)
+  - type: web
+    name: codearena-problem-service
+    runtime: docker
+    dockerContext: ./services/problem-service
+    dockerfilePath: ./services/problem-service/Dockerfile
+    envVars:
+      - key: CODEARENA_ROOT
+        value: /app
+      - key: SERVER_PORT
+        value: 3001
+
+  # Submission Service
+  - type: web
+    name: codearena-submission-service
+    runtime: node
+    buildCommand: cd services/submission-service && npm install
+    startCommand: cd services/submission-service && npm start
+    envVars:
+      - key: PORT
+        value: 3002
+      - key: DATABASE_URL
+        sync: false
+      - key: RABBITMQ_HOST
+        value: your-rabbitmq-host.render.com
+      - key: RABBITMQ_USER
+        value: guest
+      - key: RABBITMQ_PASSWORD
+        value: guest
+
+  # WebSocket Service
+  - type: web
+    name: codearena-websocket-service
+    runtime: node
+    buildCommand: cd services/websocket-service && npm install
+    startCommand: cd services/websocket-service && npm start
+    envVars:
+      - key: PORT
+        value: 3004
+      - key: RABBITMQ_HOST
+        value: your-rabbitmq-host.render.com
+      - key: RABBITMQ_USER
+        value: guest
+      - key: RABBITMQ_PASSWORD
+        value: guest
+
+  # AI Review Service
+  - type: web
+    name: codearena-ai-review-service
+    runtime: node
+    buildCommand: cd services/ai-review-service && npm install
+    startCommand: cd services/ai-review-service && npm start
+    envVars:
+      - key: PORT
+        value: 3006
+      - key: DATABASE_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+
+databases:
+  # Redis (you can use Render's managed Redis)
+  - name: codearena-redis
+    databaseName: codearena
+    user: codearena
+
+  # RabbitMQ (you'll need external service or use CloudAMQP)
+  # RabbitMQ is not available on Render, use CloudAMQP instead

@@ -1,0 +1,135 @@
+groups:
+  - name: codearena_alerts
+    interval: 30s
+    rules:
+      # Service Availability
+      - alert: ServiceDown
+        expr: up{job=~"api-gateway|problem-service|submission-service|execution-service|websocket-service|contest-service|ai-review-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} has been down for more than 1 minute."
+
+      # High Error Rate
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High error rate on {{ $labels.job }}"
+          description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.job }}"
+
+      # High Latency
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High latency on {{ $labels.job }}"
+          description: "95th percentile latency is {{ $value }}s for {{ $labels.job }}"
+
+      # RabbitMQ Queue Depth
+      - alert: RabbitMQQueueDepthHigh
+        expr: rabbitmq_queue_messages{queue="codearena.submissions"} > 1000
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "RabbitMQ queue depth is high"
+          description: "Queue {{ $labels.queue }} has {{ $value }} messages"
+
+      # RabbitMQ Queue Depth Critical
+      - alert: RabbitMQQueueDepthCritical
+        expr: rabbitmq_queue_messages{queue="codearena.submissions"} > 5000
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "RabbitMQ queue depth is critical"
+          description: "Queue {{ $labels.queue }} has {{ $value }} messages"
+
+      # High Memory Usage
+      - alert: HighMemoryUsage
+        expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High memory usage on {{ $labels.pod }}"
+          description: "Memory usage is {{ $value | humanizePercentage }} for {{ $labels.pod }}"
+
+      # High CPU Usage
+      - alert: HighCPUUsage
+        expr: (rate(container_cpu_usage_seconds_total[5m]) / container_spec_cpu_quota) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High CPU usage on {{ $labels.pod }}"
+          description: "CPU usage is {{ $value | humanizePercentage }} for {{ $labels.pod }}"
+
+      # Disk Space Low
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Disk space low on {{ $labels.instance }}"
+          description: "Available disk space is {{ $value | humanizePercentage }}"
+
+      # Database Connection Pool Exhausted
+      - alert: DatabaseConnectionPoolExhausted
+        expr: hikaricp_connections_active / hikaricp_connections_max > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "Connection pool usage is {{ $value | humanizePercentage }}"
+
+      # Redis Memory High
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis memory usage is {{ $value | humanizePercentage }}"
+
+      # Execution Service Queue Backlog
+      - alert: ExecutionServiceBacklog
+        expr: rabbitmq_queue_messages{queue="codearena.submissions"} > 100
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Execution service backlog building"
+          description: "Submission queue has {{ $value }} messages pending"
+
+      # WebSocket Connection Count High
+      - alert: WebSocketConnectionsHigh
+        expr: socketio_connections_total > 10000
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High WebSocket connection count"
+          description: "Current connections: {{ $value }}"

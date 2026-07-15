@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-review-service
+  namespace: codearena
+  labels:
+    app: ai-review-service
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ai-review-service
+  template:
+    metadata:
+      labels:
+        app: ai-review-service
+        version: v1
+    spec:
+      containers:
+      - name: ai-review-service
+        image: codearena/ai-review-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3006
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: POSTGRES_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: codearena-config
+              key: POSTGRES_HOST
+        - name: POSTGRES_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: codearena-config
+              key: POSTGRES_PORT
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: codearena-config
+              key: POSTGRES_DB
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: codearena-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: codearena-secrets
+              key: POSTGRES_PASSWORD
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: codearena-secrets
+              key: OPENAI_API_KEY
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3006
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3006
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-review-service
+  namespace: codearena
+  labels:
+    app: ai-review-service
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3006
+    targetPort: 3006
+    protocol: TCP
+  selector:
+    app: ai-review-service

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: codearena-config
+  namespace: codearena
+data:
+  POSTGRES_HOST: "postgres-service"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "codearena"
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  RABBITMQ_HOST: "rabbitmq-service"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_USER: "guest"
+  MONGODB_HOST: "mongodb-service"
+  MONGODB_PORT: "27017"
+  MONGODB_DB: "codearena"

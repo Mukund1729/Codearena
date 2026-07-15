@@ -1,0 +1,259 @@
+version: '3.8'
+
+services:
+  # Infrastructure Services
+  postgres:
+    image: postgres:15-alpine
+    container_name: codearena-postgres
+    environment:
+      POSTGRES_DB: codearena
+      POSTGRES_USER: codearena
+      POSTGRES_PASSWORD: codearena123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U codearena"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - codearena-network
+
+  mongodb:
+    image: mongo:7
+    container_name: codearena-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./database/mongodb/init.js:/docker-entrypoint-initdb.d/init.js
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - codearena-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: codearena-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./database/redis/init.lua:/usr/local/etc/redis/init.lua
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - codearena-network
+
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: codearena-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - codearena-network
+
+  # Microservices
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: ../../infrastructure/docker/Dockerfile.gateway
+    container_name: codearena-api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PROBLEM_SERVICE_URL=http://problem-service:3001
+      - SUBMISSION_SERVICE_URL=http://submission-service:3002
+      - EXECUTION_SERVICE_URL=http://execution-service:3003
+      - CONTEST_SERVICE_URL=http://contest-service:3005
+      - AI_REVIEW_SERVICE_URL=http://ai-review-service:3006
+      - JWT_SECRET=your-secret-key-change-in-production
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - codearena-network
+    restart: unless-stopped
+
+  problem-service:
+    build:
+      context: ./services/problem-service
+      dockerfile: ../../infrastructure/docker/Dockerfile.java
+    container_name: codearena-problem-service
+    ports:
+      - "3001:3001"
+    environment:
+      - SPRING_PROFILES_ACTIVE=production
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=codearena
+      - POSTGRES_USER=codearena
+      - POSTGRES_PASSWORD=codearena123
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_KEY=${AWS_SECRET_KEY}
+      - AWS_REGION=us-east-1
+      - AWS_S3_BUCKET=codearena-testcases
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - codearena-network
+    restart: unless-stopped
+
+  submission-service:
+    build:
+      context: ./services/submission-service
+      dockerfile: ../../infrastructure/docker/Dockerfile.node
+    container_name: codearena-submission-service
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=production
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=codearena
+      - POSTGRES_USER=codearena
+      - POSTGRES_PASSWORD=codearena123
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - codearena-network
+    restart: unless-stopped
+
+  execution-service:
+    build:
+      context: ./services/execution-service
+      dockerfile: ../../infrastructure/docker/Dockerfile.java
+    container_name: codearena-execution-service
+    ports:
+      - "3003:3003"
+    environment:
+      - SPRING_PROFILES_ACTIVE=production
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=codearena
+      - POSTGRES_USER=codearena
+      - POSTGRES_PASSWORD=codearena123
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - codearena-network
+    restart: unless-stopped
+
+  websocket-service:
+    build:
+      context: ./services/websocket-service
+      dockerfile: ../../infrastructure/docker/Dockerfile.node
+    container_name: codearena-websocket-service
+    ports:
+      - "3004:3004"
+    environment:
+      - NODE_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - JWT_SECRET=your-secret-key-change-in-production
+      - FRONTEND_URL=http://localhost:3000
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - codearena-network
+    restart: unless-stopped
+
+  contest-service:
+    build:
+      context: ./services/contest-service
+      dockerfile: ../../infrastructure/docker/Dockerfile.java
+    container_name: codearena-contest-service
+    ports:
+      - "3005:3005"
+    environment:
+      - SPRING_PROFILES_ACTIVE=production
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=codearena
+      - POSTGRES_USER=codearena
+      - POSTGRES_PASSWORD=codearena123
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - codearena-network
+    restart: unless-stopped
+
+  ai-review-service:
+    build:
+      context: ./services/ai-review-service
+      dockerfile: ../../infrastructure/docker/Dockerfile.node
+    container_name: codearena-ai-review-service
+    ports:
+      - "3006:3006"
+    environment:
+      - NODE_ENV=production
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=codearena
+      - POSTGRES_USER=codearena
+      - POSTGRES_PASSWORD=codearena123
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - codearena-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  mongodb_data:
+  redis_data:
+  rabbitmq_data:
+
+networks:
+  codearena-network:
+    driver: bridge
