@@ -63,6 +63,13 @@
             <version>${aws.java.sdk.version}</version>
         </dependency>
 
+        <!-- Docker Java transport -->
+        <dependency>
+            <groupId>com.github.docker-java</groupId>
+            <artifactId>docker-java-transport-httpclient5</artifactId>
+            <version>3.3.6</version>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

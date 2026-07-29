@@ -13,7 +13,7 @@ public class ExecutionJob {
 
     private String submissionId;
     private String userId;
-    private Long problemId;
+    private String problemId;
     private Long contestId;
     private String language;
     private String code;

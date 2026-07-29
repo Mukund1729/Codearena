@@ -1,17 +1,23 @@
 package com.codearena.execution.service;
 
 import com.codearena.execution.model.ExecutionResult;
+import com.codearena.execution.model.TestCase;
 import com.codearena.execution.model.TestCaseResult;
+import com.github.dockerjava.api.DockerClient;
+import com.github.dockerjava.api.command.CreateContainerResponse;
+import com.github.dockerjava.api.model.Bind;
+import com.github.dockerjava.api.model.HostConfig;
+import com.github.dockerjava.api.model.Volume;
+import com.github.dockerjava.core.command.ExecStartResultCallback;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -21,168 +27,187 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class DockerExecutionService implements ExecutionService {
 
-    private static final int TIMEOUT_SECONDS = 5;
+    private final DockerClient dockerClient;
 
-    public ExecutionResult executeCode(String code, String language, String dockerImage, List<String> testInputs) {
+    private static final long MEMORY_LIMIT = 256L * 1024 * 1024; // 256MB
+    private static final long CPU_LIMIT = 500_000_000L;          // 0.5 cores
+    private static final int TIMEOUT_SECONDS = 3;
+
+    @Override
+    public ExecutionResult executeCode(String code, String language, String dockerImage, List<TestCase> testCases) {
+        if (testCases == null || testCases.isEmpty()) {
+            testCases = List.of(TestCase.builder().input("").expectedOutput("").build());
+        }
+
         File tempDir = null;
+        String containerId = null;
         try {
-            tempDir = Files.createTempDirectory("codearena-exec").toFile();
+            tempDir = Files.createTempDirectory("codearena-sandbox").toFile();
             String fileName = getSourceFileName(language);
-            File sourceFile = new File(tempDir, fileName);
-            writeSourceFile(sourceFile, code);
+            writeSourceFile(new File(tempDir, fileName), code);
+
+            HostConfig hostConfig = HostConfig.newHostConfig()
+                    .withMemory(MEMORY_LIMIT)
+                    .withNanoCPUs(CPU_LIMIT)
+                    .withNetworkMode("none")
+                    .withBinds(new Bind(tempDir.getAbsolutePath(), new Volume("/app")));
+
+            CreateContainerResponse container = dockerClient.createContainerCmd(dockerImage)
+                    .withHostConfig(hostConfig)
+                    .withWorkingDir("/app")
+                    .withCmd("tail", "-f", "/dev/null")
+                    .exec();
+
+            containerId = container.getId();
+            dockerClient.startContainerCmd(containerId).exec();
 
             List<TestCaseResult> testCaseResults = new ArrayList<>();
             int passed = 0;
-            long totalTime = 0;
-            int maxMemory = 0;
 
-            for (int i = 0; i < testInputs.size(); i++) {
-                TestCaseResult result = executeTestCase(tempDir, language, fileName, testInputs.get(i), i + 1);
+            for (int i = 0; i < testCases.size(); i++) {
+                TestCase tc = testCases.get(i);
+                TestCaseResult result = runInContainer(
+                    containerId, tempDir, language, fileName,
+                    tc.getInput() != null ? tc.getInput() : "",
+                    tc.getExpectedOutput() != null ? tc.getExpectedOutput() : "",
+                    i + 1
+                );
                 testCaseResults.add(result);
                 if ("PASSED".equals(result.getStatus())) {
                     passed++;
                 }
-                if (result.getExecutionTime() != null) {
-                    totalTime += result.getExecutionTime();
-                }
-                if (result.getMemoryUsed() != null && result.getMemoryUsed() > maxMemory) {
-                    maxMemory = result.getMemoryUsed();
-                }
             }
 
-            String overallStatus = determineOverallStatus(testCaseResults, passed, testInputs.size());
+            String overallStatus = determineOverallStatus(testCaseResults, passed, testCases.size());
             return ExecutionResult.builder()
-                .status(overallStatus)
-                .executionTime(testInputs.isEmpty() ? 0 : (int) (totalTime / testInputs.size()))
-                .memoryUsed(maxMemory)
-                .testCasesPassed(passed)
-                .totalTestCases(testInputs.size())
-                .build();
+                    .status(overallStatus)
+                    .testCasesPassed(passed)
+                    .totalTestCases(testCases.size())
+                    .testCaseResults(testCaseResults)
+                    .build();
+
         } catch (Exception e) {
-            log.error("Error executing code locally", e);
+            log.error("Docker execution failed", e);
             return ExecutionResult.builder()
-                .status("RUNTIME_ERROR")
-                .errorMessage(e.getMessage())
-                .build();
+                    .status("RUNTIME_ERROR")
+                    .errorMessage("Sandbox Execution Error: " + e.getMessage())
+                    .build();
         } finally {
+            if (containerId != null) {
+                try {
+                    dockerClient.stopContainerCmd(containerId).withTimeout(2).exec();
+                    dockerClient.removeContainerCmd(containerId).withForce(true).exec();
+                } catch (Exception ignored) {
+                    log.debug("Container cleanup failed for {}", containerId);
+                }
+            }
             deleteDirectory(tempDir);
         }
     }
 
-    private TestCaseResult executeTestCase(File workingDir, String language, String fileName, String input, int testCaseNumber) {
-        long startTime = System.currentTimeMillis();
+    private TestCaseResult runInContainer(
+            String containerId, File tempDir, String language,
+            String fileName, String input, String expectedOutput, int tcNum) {
         try {
-            List<String> command = createRunCommand(workingDir, language, fileName);
-            ProcessBuilder processBuilder = new ProcessBuilder(command)
-                .directory(workingDir)
-                .redirectErrorStream(true);
+            String inputFileName = "input_" + tcNum + ".txt";
+            Files.write(new File(tempDir, inputFileName).toPath(), input.getBytes(StandardCharsets.UTF_8));
 
-            Process process = processBuilder.start();
-            if (input != null) {
-                process.getOutputStream().write(input.getBytes(StandardCharsets.UTF_8));
-                process.getOutputStream().close();
+            String execCmd = getExecCommand(language, fileName, inputFileName);
+            String execId = dockerClient.execCreateCmd(containerId)
+                    .withAttachStdout(true)
+                    .withAttachStderr(true)
+                    .withCmd("sh", "-c", execCmd)
+                    .exec()
+                    .getId();
+
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            ExecStartResultCallback callback = new ExecStartResultCallback(outputStream, outputStream);
+
+            dockerClient.execStartCmd(execId).exec(callback);
+
+            boolean completed = callback.awaitCompletion(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            if (!completed) {
+                return TestCaseResult.builder()
+                        .testCaseNumber(tcNum)
+                        .status("TLE")
+                        .expectedOutput(expectedOutput)
+                        .stderr("Time Limit Exceeded")
+                        .build();
             }
 
-            boolean finished = process.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS);
-            String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
-            long executionTime = System.currentTimeMillis() - startTime;
+            String actualOutput = outputStream.toString(StandardCharsets.UTF_8).trim();
+            String normalizedActual = normalizeOutput(actualOutput);
+            String normalizedExpected = normalizeOutput(expectedOutput);
 
-            if (!finished) {
-                process.destroyForcibly();
-                return TestCaseResult.builder()
-                    .testCaseNumber(testCaseNumber)
-                    .status("TLE")
-                    .executionTime((int) executionTime)
-                    .stderr("Time limit exceeded")
+            boolean matches = normalizedActual.equals(normalizedExpected);
+            return TestCaseResult.builder()
+                    .testCaseNumber(tcNum)
+                    .status(matches ? "PASSED" : "WRONG_ANSWER")
+                    .expectedOutput(expectedOutput)
+                    .actualOutput(actualOutput)
                     .build();
-            }
 
-            int exitCode = process.exitValue();
-            if (exitCode != 0) {
-                return TestCaseResult.builder()
-                    .testCaseNumber(testCaseNumber)
+        } catch (Exception e) {
+            return TestCaseResult.builder()
+                    .testCaseNumber(tcNum)
                     .status("RUNTIME_ERROR")
-                    .executionTime((int) executionTime)
-                    .stderr(output)
+                    .expectedOutput(expectedOutput)
+                    .stderr(e.getMessage())
                     .build();
-            }
-
-            return TestCaseResult.builder()
-                .testCaseNumber(testCaseNumber)
-                .status("PASSED")
-                .actualOutput(output)
-                .executionTime((int) executionTime)
-                .memoryUsed(0)
-                .build();
-        } catch (IOException | InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return TestCaseResult.builder()
-                .testCaseNumber(testCaseNumber)
-                .status("RUNTIME_ERROR")
-                .stderr(e.getMessage())
-                .build();
         }
     }
 
-    private List<String> createRunCommand(File workingDir, String language, String fileName) {
-        boolean isWindows = System.getProperty("os.name").toLowerCase().contains("win");
-        String shell = isWindows ? "cmd.exe" : "sh";
-        String shellFlag = isWindows ? "/c" : "-c";
+    private String normalizeOutput(String output) {
+        if (output == null) return "";
+        return output.replaceAll("\r\n", "\n").trim();
+    }
 
-        return switch (language.toLowerCase()) {
-            case "python" -> List.of("python", fileName);
-            case "java" -> List.of(shell, shellFlag, String.format("javac %s && java Solution", fileName));
-            case "cpp" -> List.of(shell, shellFlag, String.format("g++ -o solution %s && ./solution", fileName));
-            case "javascript" -> List.of("node", fileName);
-            default -> throw new IllegalArgumentException("Unsupported language: " + language);
+    private String getExecCommand(String lang, String file, String inputFile) {
+        return switch (lang.toLowerCase()) {
+            case "python" -> "python3 " + file + " < " + inputFile;
+            case "java" -> "javac " + file + " && java Solution < " + inputFile;
+            case "cpp" -> "g++ -o solution " + file + " && ./solution < " + inputFile;
+            case "javascript" -> "node " + file + " < " + inputFile;
+            default -> throw new IllegalArgumentException("Unsupported language: " + lang);
         };
     }
 
-    private String getSourceFileName(String language) {
-        return switch (language.toLowerCase()) {
+    private String getSourceFileName(String lang) {
+        return switch (lang.toLowerCase()) {
             case "python" -> "solution.py";
             case "java" -> "Solution.java";
             case "cpp" -> "solution.cpp";
             case "javascript" -> "solution.js";
-            default -> throw new IllegalArgumentException("Unsupported language: " + language);
+            default -> throw new IllegalArgumentException("Unsupported language: " + lang);
         };
     }
 
-    private void writeSourceFile(File sourceFile, String code) throws IOException {
-        try (FileOutputStream out = new FileOutputStream(sourceFile)) {
+    private void writeSourceFile(File file, String code) throws Exception {
+        try (FileOutputStream out = new FileOutputStream(file)) {
             out.write(code.getBytes(StandardCharsets.UTF_8));
         }
     }
 
     private String determineOverallStatus(List<TestCaseResult> results, int passed, int total) {
-        if (passed == total) {
-            return "ACCEPTED";
-        }
-        boolean hasTLE = results.stream().anyMatch(r -> "TLE".equals(r.getStatus()));
-        boolean hasRuntimeError = results.stream().anyMatch(r -> "RUNTIME_ERROR".equals(r.getStatus()));
-        if (hasTLE) {
-            return "TIME_LIMIT_EXCEEDED";
-        }
-        if (hasRuntimeError) {
-            return "RUNTIME_ERROR";
-        }
+        if (passed == total) return "ACCEPTED";
+        if (results.stream().anyMatch(r -> "TLE".equals(r.getStatus()))) return "TIME_LIMIT_EXCEEDED";
+        if (results.stream().anyMatch(r -> "RUNTIME_ERROR".equals(r.getStatus()))) return "RUNTIME_ERROR";
         return "WRONG_ANSWER";
     }
 
-    private void deleteDirectory(File directory) {
-        if (directory == null || !directory.exists()) {
-            return;
-        }
-        File[] files = directory.listFiles();
-        if (files != null) {
-            for (File file : files) {
-                if (file.isDirectory()) {
-                    deleteDirectory(file);
-                } else {
-                    file.delete();
+    private void deleteDirectory(File dir) {
+        if (dir != null && dir.exists()) {
+            File[] files = dir.listFiles();
+            if (files != null) {
+                for (File f : files) {
+                    if (f.isDirectory()) {
+                        deleteDirectory(f);
+                    } else {
+                        f.delete();
+                    }
                 }
             }
+            dir.delete();
         }
-        directory.delete();
     }
 }

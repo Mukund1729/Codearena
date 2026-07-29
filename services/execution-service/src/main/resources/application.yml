@@ -36,6 +36,7 @@ rabbitmq:
 
 docker:
   host: ${DOCKER_HOST:unix:///var/run/docker.sock}
+  enabled: true
 
 logging:
   level:

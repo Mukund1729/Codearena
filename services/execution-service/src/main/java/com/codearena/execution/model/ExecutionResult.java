@@ -18,6 +18,7 @@ public class ExecutionResult {
     private Integer memoryUsed; // in MB
     private Integer testCasesPassed;
     private Integer totalTestCases;
+    private java.util.List<com.codearena.execution.model.TestCaseResult> testCaseResults;
     private String stdout;
     private String stderr;
 }

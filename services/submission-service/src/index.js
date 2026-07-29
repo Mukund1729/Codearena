@@ -74,13 +74,13 @@ const SUPPORTED_LANGUAGES = {
   }
 };
 
-// Validation schema
+// Validation schema — problemId accepts string IDs like "hello", "1000A", or numeric DB ids
 const submissionSchema = Joi.object({
-  problemId: Joi.number().integer().positive().required(),
+  problemId: Joi.alternatives().try(Joi.number(), Joi.string()).required(),
   language: Joi.string().valid('python', 'java', 'cpp', 'javascript').required(),
   code: Joi.string().max(1024 * 200).required(),
   userId: Joi.string().required(),
-  contestId: Joi.number().integer().positive().optional()
+  contestId: Joi.number().integer().positive().optional().allow(null)
 });
 
 // Initialize database tables
@@ -96,7 +96,7 @@ async function initializeDatabase() {
         id SERIAL PRIMARY KEY,
         submission_id VARCHAR(36) UNIQUE NOT NULL,
         user_id VARCHAR(255) NOT NULL,
-        problem_id INTEGER NOT NULL,
+        problem_id VARCHAR(100) NOT NULL,
         contest_id INTEGER,
         language VARCHAR(50) NOT NULL,
         code TEXT NOT NULL,
@@ -108,11 +108,32 @@ async function initializeDatabase() {
         test_cases_passed INTEGER,
         total_test_cases INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (problem_id) REFERENCES problems(id),
-        FOREIGN KEY (contest_id) REFERENCES contests(id)
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    // Create indexes for better performance
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_submissions_user_id ON submissions(user_id);
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_submissions_problem_id ON submissions(problem_id);
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_submissions_status ON submissions(status);
+    `);
+
+    // Migrate existing installations from INTEGER problem_id
+    await pool.query(`
+      ALTER TABLE submissions DROP CONSTRAINT IF EXISTS submissions_problem_id_fkey;
+    `).catch(() => {});
+
+    await pool.query(`
+      DO $$ BEGIN
+        ALTER TABLE submissions ALTER COLUMN problem_id TYPE VARCHAR(100) USING problem_id::VARCHAR;
+      EXCEPTION WHEN others THEN NULL;
+      END $$;
+    `).catch(() => {});
 
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_submissions_user_problem 
@@ -291,6 +312,7 @@ app.post('/submissions', async (req, res) => {
     }
 
     const { problemId, language, code, contestId } = value;
+    const normalizedProblemId = String(problemId);
 
     // Validate language and code
     validateSubmission(language, code);
@@ -302,7 +324,7 @@ app.post('/submissions', async (req, res) => {
     const dbRecord = await createSubmissionRecord({
       submissionId,
       userId,
-      problemId,
+      problemId: normalizedProblemId,
       contestId,
       language,
       code
@@ -312,7 +334,7 @@ app.post('/submissions', async (req, res) => {
     await publishExecutionJob({
       submissionId,
       userId,
-      problemId,
+      problemId: normalizedProblemId,
       contestId,
       language,
       code,

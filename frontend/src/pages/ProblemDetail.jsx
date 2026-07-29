@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import Editor from '@monaco-editor/react'
-import { problemService, problemIdToNumeric } from '../services/problemService'
+import { problemService } from '../services/problemService'
 import { submissionService } from '../services/submissionService'
 import { aiService } from '../services/aiService'
 import { useSocket } from '../contexts/SocketContext'

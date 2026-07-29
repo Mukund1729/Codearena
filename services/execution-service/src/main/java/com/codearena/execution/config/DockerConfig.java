@@ -5,15 +5,13 @@ import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientBuilder;
 import com.github.dockerjava.core.DockerClientConfig;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@ConditionalOnProperty(prefix = "docker", name = "enabled", havingValue = "true")
 public class DockerConfig {
 
-    @Value("${docker.host}")
+    @Value("${docker.host:unix:///var/run/docker.sock}")
     private String dockerHost;
 
     @Bean

@@ -112,12 +112,12 @@ CREATE TABLE IF NOT EXISTS contest_participants (
 
 CREATE INDEX IF NOT EXISTS idx_contest_participants_contest_user ON contest_participants(contest_id, user_id);
 
--- Submissions table
+-- Submissions table (problem_id supports external platform IDs like "hello", "1000A")
 CREATE TABLE IF NOT EXISTS submissions (
     id SERIAL PRIMARY KEY,
     submission_id VARCHAR(36) UNIQUE NOT NULL,
     user_id VARCHAR(255) NOT NULL,
-    problem_id INTEGER NOT NULL REFERENCES problems(id),
+    problem_id VARCHAR(100) NOT NULL,
     contest_id INTEGER REFERENCES contests(id),
     language VARCHAR(50) NOT NULL,
     code TEXT NOT NULL,

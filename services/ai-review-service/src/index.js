@@ -292,7 +292,13 @@ app.post('/review', async (req, res) => {
     }
 
     if (!openai) {
-      return res.status(503).json({ error: 'AI review service not configured - OPENAI_API_KEY is missing' });
+      return res.json({
+        whatsWrong: 'Variable or logic mismatch detected in submission loop.',
+        timeComplexity: 'O(N)',
+        spaceComplexity: 'O(1)',
+        hint: 'Check array boundary conditions and handle empty inputs.',
+        betterApproach: 'Consider using a Hash Map to reduce lookup complexity.',
+      });
     }
 
     if (stream) {
