@@ -70,7 +70,7 @@ const SUPPORTED_LANGUAGES = {
   javascript: {
     extensions: ['.js'],
     maxSize: 1024 * 150, // 150KB
-    image: 'node:18-slim'
+    image: 'node:22-slim'
   }
 };
 
