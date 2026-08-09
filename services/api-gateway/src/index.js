@@ -380,14 +380,6 @@ const handleRegister = async (req, res) => {
     });
 
     res.json({ token: accessToken, userId: profileData.id, username: profileData.username, email: profileData.email });
-
-    logger.info({
-      correlationId: req.correlationId,
-      userId: profileData.id,
-      message: 'User registered successfully'
-    });
-
-    res.json({ token, userId: profileData.id, username: profileData.username, email: profileData.email });
   } catch (error) {
     logger.error({
       correlationId: req.correlationId,

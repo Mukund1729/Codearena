@@ -1,182 +1,155 @@
 # CodeArena - Distributed Online Judge Platform
 
-A distributed online judge platform similar to LeetCode/HackerRank, built with microservices architecture. This platform handles concurrent code submissions safely, executes them in isolated sandboxed containers, streams results in real-time, and supports live contests with leaderboards.
+CodeArena is a distributed online judge platform designed as a production-like full-stack demo. It combines microservices, modern authentication, real-time streaming, containerized execution, and leaderboard management to model a competitive coding platform similar to LeetCode or HackerRank.
 
-## Architecture Overview
+## Why this project is strong
 
-### Microservices
+- **Microservices architecture:** clear separation between gateway, contest, submission, execution, real-time, and AI review services.
+- **Real-time behavior:** WebSockets deliver live updates and contest leaderboard events.
+- **Production patterns:** service discovery, health checks, circuit breakers, rate limiting, and environment-based configuration.
+- **Modern auth:** Supabase Auth integration for signup/login and user profile management.
+- **Containerized execution:** Java execution service runs code in isolated Docker containers.
+- **Cloud-ready:** Docker Compose and Kubernetes/Render deployment manifests are included.
 
-1. **API Gateway** (Node.js/Express) - Single entry point, authentication, rate limiting, circuit breaker
-2. **Problem Service** (Java Spring Boot) - Manages problems, test cases, editorial content
-3. **Submission Service** (Node.js) - Receives code submissions, validates, queues for execution
-4. **Execution Service** (Java Spring Boot) - Executes code in isolated Docker containers
-5. **WebSocket Service** (Node.js + Socket.io) - Real-time result streaming and live leaderboard
-6. **Contest Service** (Java Spring Boot) - Manages contests and Redis-based leaderboards
-7. **AI Review Service** (Node.js) - Provides AI-powered code review and plagiarism detection
+Yes, this repo is strong enough to present on a resume if you highlight the distributed design, live demo capability, and cloud/native integrations. The Docker configuration appears complete and aligned with the service architecture, but runtime verification is required to confirm all containers start successfully without errors.
+
+## Architecture
+
+### Services
+
+- **API Gateway** (`services/api-gateway`) — Express-based request routing, Supabase auth, rate limiting, and service proxying.
+- **Problem Service** (`services/problem-service`) — Java Spring Boot service that manages problems and test cases.
+- **Submission Service** (`services/submission-service`) — Node.js service that validates submissions and publishes execution jobs.
+- **Execution Service** (`services/execution-service`) — Java Spring Boot service that executes code in sandboxed Docker containers.
+- **WebSocket Service** (`services/websocket-service`) — handles real-time client notifications and contest leaderboard pushes.
+- **Contest Service** (`services/contest-service`) — Java Spring Boot contest manager with Redis-backed leaderboards.
+- **AI Review Service** (`services/ai-review-service`) — Node.js service for AI feedback and plagiarism detection.
 
 ### Infrastructure
 
-- **Databases**: PostgreSQL (relational data), MongoDB (execution logs), Redis (caching, leaderboards)
-- **Message Queue**: RabbitMQ for async job processing
-- **Storage**: AWS S3 for test cases and editorial files
-- **Container Orchestration**: Kubernetes (EKS on AWS)
-- **Monitoring**: Prometheus + Grafana
+- **PostgreSQL** for relational data.
+- **MongoDB** for execution logs and audit data.
+- **Redis** for leaderboards, caching, and rate limiting.
+- **RabbitMQ** for async job queueing and result streaming.
+- **Docker Compose** for local orchestration.
+- **Kubernetes / Terraform** support for cloud deployment.
 
-## Tech Stack
+## What is already configured
 
-- **API Gateway**: Node.js, Express, JWT, Redis
-- **Java Services**: Spring Boot, PostgreSQL, Docker
-- **Node Services**: Express, Socket.io, RabbitMQ, OpenAI API
-- **Frontend**: React, Monaco Editor, Tailwind CSS
-- **Infrastructure**: Docker, Kubernetes, Terraform, AWS
+- `docker-compose.yml` includes all required infrastructure and microservices.
+- Service ports are fixed and documented.
+- Services use container hostnames on the Docker network (`redis`, `rabbitmq`, `postgres`).
+- Supabase values are expected from environment variables.
+- AI Review is optional; it requires `OPENAI_API_KEY`.
 
-## Getting Started
+## Runtime ports
 
-### Prerequisites
+| Service | Port |
+|---|---|
+| Frontend | `5173` |
+| API Gateway | `3000` |
+| Problem Service | `3001` |
+| Submission Service | `3002` |
+| Execution Service | `3003` |
+| WebSocket Service | `3004` |
+| Contest Service | `3005` |
+| AI Review Service | `3006` |
+| RabbitMQ | `5672` / `15672` |
+| Redis | `6379` |
+| MongoDB | `27017` |
+| PostgreSQL | `5432` |
 
-- Docker and Docker Compose
-- Node.js 18+
-- Java 17+
-- PostgreSQL 13+
-- Redis 7+
-- RabbitMQ 3.12+
+## Required environment variables
 
-### Local Development
+Create a root `.env` file with at least:
 
-1. Clone the repository
-2. Start infrastructure services:
-   ```bash
-   docker-compose up -d postgres mongodb redis rabbitmq
-   ```
-
-3. Initialize databases:
-   ```bash
-   npm run db:init
-   ```
-
-4. Start individual services:
-   ```bash
-   # API Gateway
-   cd services/api-gateway
-   npm install
-   npm run dev
-
-   # Problem Service
-   cd services/problem-service
-   mvn spring-boot:run
-
-   # Submission Service
-   cd services/submission-service
-   npm install
-   npm run dev
-
-   # Execution Service
-   cd services/execution-service
-   mvn spring-boot:run
-
-   # WebSocket Service
-   cd services/websocket-service
-   npm install
-   npm run dev
-
-   # Contest Service
-   cd services/contest-service
-   mvn spring-boot:run
-
-   # AI Review Service
-   cd services/ai-review-service
-   npm install
-   npm run dev
-   ```
-
-5. Start frontend:
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-
-   The frontend dev server runs on `http://localhost:5173` and proxies API requests to the API Gateway at `http://localhost:3000`.
-For Docker-less local development, see `START_LOCAL.md` for infrastructure setup and service startup commands.
-### Docker Compose (All Services)
-
-```bash
-docker-compose up -d
+```env
+SUPABASE_URL=https://<your-supabase-project>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+OPENAI_API_KEY=<openai-api-key>   # optional
+REDIS_HOST=localhost
+REDIS_PORT=6379
+RABBITMQ_HOST=localhost
+RABBITMQ_USER=guest
+RABBITMQ_PASSWORD=guest
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=codearena
+POSTGRES_USER=codearena
+POSTGRES_PASSWORD=codearena123
 ```
 
-## Key Features
+## Local development using Docker
 
-- **Sandboxed Execution**: Code runs in isolated Docker containers with strict resource limits
-- **Real-time Streaming**: WebSocket-based result delivery
-- **Live Contests**: Redis-backed leaderboards with O(log n) updates
-- **AI Code Review**: OpenAI GPT-4o integration for feedback and hints
-- **Plagiarism Detection**: Vector embeddings with cosine similarity
-- **Multi-language Support**: Python, Java, C++, JavaScript
-- **Circuit Breaker**: Fault tolerance for service degradation
-- **Rate Limiting**: Redis-based sliding window (5 submissions/minute)
+1. Start the full stack:
+   ```bash
+   docker-compose up -d
+   ```
 
-## Security
+2. Confirm containers are healthy:
+   ```bash
+   docker-compose ps
+   docker-compose logs -f api-gateway
+   ```
 
-- JWT-based authentication
-- Container isolation with no network access
-- Resource limits (CPU: 0.5 cores, Memory: 256MB)
-- No filesystem write access outside /tmp
-- IAM roles with least privilege
+3. Start services or frontend as needed:
+   - Frontend: `cd frontend && npm install && npm run dev`
+   - The frontend proxies to API Gateway at `http://localhost:3000`.
 
-## Monitoring
+## Local development without Docker
 
-- Prometheus metrics for all services
-- Grafana dashboards for:
-  - Submissions per second
-  - Execution queue depth
-  - Container spin-up latency
-  - p50/p95/p99 execution time
-- Structured JSON logging with correlation IDs
-- Alerting on queue depth > 100 jobs
+If you prefer local services, use `START_LOCAL.md` for setup instructions for PostgreSQL, Redis, RabbitMQ, and Supabase.
 
-## Load Testing
+## Running the application
 
-```bash
-k6 run load-tests/submission-test.js
-```
+- Frontend: `http://localhost:5173`
+- API Gateway: `http://localhost:3000`
+- Auth endpoints: `/auth/register`, `/auth/login`.
+- Contest leaderboard: `/api/contests/<contestId>/leaderboard`.
 
-Target metrics:
-- Container spin-up time: < 800ms
-- WebSocket result delivery: < 3 seconds end-to-end
-- Redis leaderboard reads: 1000+ concurrent viewers
+## Deployment notes
 
-## Project Structure
+- This repo includes `render.yaml` and Kubernetes manifests for cloud deployment.
+- For a production-ready demo, ensure:
+  - Supabase secrets are stored securely
+  - Docker host mount for execution service is protected
+  - OpenAI key is not exposed publicly
+  - Redis and RabbitMQ are deployed with persistence
+
+## Strength assessment
+
+- **Strength:** High for a resume/project demo because it combines distributed systems, real-time messaging, auth, and containerized execution.
+- **Docker readiness:** The Docker Compose stack is configured and appears complete. It should work, but you should run it once to confirm there are no runtime failures.
+- **What to improve for an interview demo:** A public live URL, secure secret handling, readable deployment documentation, and a demo script for reviewers.
+
+## Project structure
 
 ```
 codearena/
 ├── services/
-│   ├── api-gateway/          # Node.js/Express
-│   ├── problem-service/      # Java Spring Boot
-│   ├── submission-service/   # Node.js
-│   ├── execution-service/    # Java Spring Boot
-│   ├── websocket-service/   # Node.js + Socket.io
-│   ├── contest-service/      # Java Spring Boot
-│   └── ai-review-service/    # Node.js
-├── frontend/                 # React + Monaco Editor
+│   ├── api-gateway/
+│   ├── problem-service/
+│   ├── submission-service/
+│   ├── execution-service/
+│   ├── websocket-service/
+│   ├── contest-service/
+│   └── ai-review-service/
+├── frontend/
 ├── infrastructure/
-│   ├── docker/              # Dockerfiles
-│   ├── kubernetes/          # K8s manifests
-│   └── terraform/           # AWS infrastructure
+│   ├── docker/
+│   ├── kubernetes/
+│   └── terraform/
 ├── database/
-│   ├── postgres/            # Schema migrations
-│   ├── mongodb/             # Indexes and collections
-│   └── redis/               # Data structures
-└── docs/                    # Architecture docs
+└── docs/
 ```
 
-## Contributing
+## What to say in your resume
 
-This is a demonstration project for MNC interviews. The architecture showcases:
-- Microservices design patterns
-- Distributed systems challenges
-- Cloud-native development
-- Security best practices
-- Real-time data streaming
+- Built a distributed online judge with Node.js and Spring Boot microservices.
+- Implemented real-time contest leaderboards using Socket.io and Redis.
+- Added asynchronous submission processing with RabbitMQ.
+- Integrated Supabase Auth and containerized sandboxed code execution.
+- Included Docker Compose and Kubernetes deployment manifests.
 
 ## License
 

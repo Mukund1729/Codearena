@@ -292,7 +292,7 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     connectedUsers: connectedUsers.size,
     rabbitmq: rabbitmqChannel ? 'connected' : 'disconnected',
-    redis: redisClient?.isOpen ? 'connected' : 'disconnected'
+  });
   });
 });
 
@@ -327,7 +327,6 @@ startServer();
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM signal received: closing HTTP server');
-  await redisClient.quit();
   if (rabbitmqChannel) {
     await rabbitmqChannel.close();
   }
