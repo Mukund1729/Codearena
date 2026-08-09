@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Infrastructure Services
   postgres:
@@ -91,7 +89,9 @@ services:
       - EXECUTION_SERVICE_URL=http://execution-service:3003
       - CONTEST_SERVICE_URL=http://contest-service:3005
       - AI_REVIEW_SERVICE_URL=http://ai-review-service:3006
-      - JWT_SECRET=your-secret-key-change-in-production
+      - JWT_SECRET=codearena-secret-key-2024
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
     depends_on:
       redis:
         condition: service_healthy
@@ -195,7 +195,9 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - RABBITMQ_URL=amqp://rabbitmq:5672
-      - JWT_SECRET=your-secret-key-change-in-production
+      - JWT_SECRET=codearena-secret-key-2024
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - FRONTEND_URL=http://localhost:3000
     depends_on:
       redis:

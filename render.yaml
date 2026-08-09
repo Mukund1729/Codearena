@@ -74,6 +74,12 @@ services:
         value: guest
       - key: RABBITMQ_PASSWORD
         value: guest
+      - key: SUPABASE_URL
+        value: https://dmttmadjkjydpjhgvnei.supabase.co
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: JWT_SECRET
+        value: codearena-secret-key-2024
 
   # AI Review Service
   - type: web

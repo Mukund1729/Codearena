@@ -46,12 +46,8 @@ if (process.env.OPENAI_API_KEY) {
   logger.warn('OPENAI_API_KEY not configured - AI review features will be disabled');
 }
 
-// Initialize pgvector extension
 async function initializeDatabase() {
   try {
-    // Enable pgvector extension
-    await pool.query('CREATE EXTENSION IF NOT EXISTS vector');
-
     // Create embeddings table for plagiarism detection
     await pool.query(`
       CREATE TABLE IF NOT EXISTS solution_embeddings (
@@ -59,17 +55,15 @@ async function initializeDatabase() {
         problem_id INTEGER NOT NULL,
         user_id VARCHAR(255) NOT NULL,
         code TEXT NOT NULL,
-        embedding vector(1536),
+        embedding real[],
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(problem_id, user_id)
       );
     `);
 
-    // Create index for similarity search
+    // Create index for fast problem lookups
     await pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_solution_embeddings_embedding 
-      ON solution_embeddings USING ivfflat (embedding vector_cosine_ops)
-      WITH (lists = 100);
+      CREATE INDEX IF NOT EXISTS idx_solution_embeddings_problem_id ON solution_embeddings(problem_id);
     `);
 
     logger.info('Database initialized successfully');
@@ -119,7 +113,7 @@ async function checkPlagiarism(problemId, code, userId) {
     // Store the embedding
     await pool.query(
       'INSERT INTO solution_embeddings (problem_id, user_id, code, embedding) VALUES ($1, $2, $3, $4) ON CONFLICT (problem_id, user_id) DO UPDATE SET code = $3, embedding = $4',
-      [problemId, userId, code, `[${embedding.join(',')}]`]
+      [problemId, userId, code, embedding]
     );
 
     // Find similar solutions

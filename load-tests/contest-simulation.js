@@ -129,7 +129,7 @@ function submitCode(data, headers) {
 
     while (!result && attempts < maxAttempts) {
       sleep(1);
-      const resultRes = http.get(`${BASE_URL}/api/submissions/${submissionId}`, { headers);
+      const resultRes = http.get(`${BASE_URL}/api/submissions/${submissionId}`, { headers });
       
       if (resultRes.status === 200) {
         const status = resultRes.json('status');
@@ -159,7 +159,7 @@ function checkLeaderboard(headers) {
 
 function viewProblem(headers) {
   const problemId = Math.floor(Math.random() * 3) + 1;
-  const problemRes = http.get(`${BASE_URL}/api/problems/${problemId}`, { headers);
+  const problemRes = http.get(`${BASE_URL}/api/problems/${problemId}`, { headers });
   
   check(problemRes, {
     'problem retrieved': (r) => r.status === 200,
@@ -172,6 +172,6 @@ export function teardown(data) {
     'Authorization': `Bearer ${data.token}`,
   };
   
-  const finalLeaderboard = http.get(`${BASE_URL}/api/contests/${CONTEST_ID}/leaderboard`, { headers);
+  const finalLeaderboard = http.get(`${BASE_URL}/api/contests/${CONTEST_ID}/leaderboard`, { headers });
   console.log(`Final leaderboard entries: ${finalLeaderboard.json().length}`);
 }

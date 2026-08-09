@@ -1,16 +1,12 @@
 -- CodeArena PostgreSQL Database Schema
 -- This script initializes all tables for the CodeArena platform
 
--- Enable pgvector extension for embeddings
-CREATE EXTENSION IF NOT EXISTS vector;
-
--- Users table
+-- Users table for seeded admin/test accounts
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
-    user_id VARCHAR(36) UNIQUE NOT NULL,
-    username VARCHAR(100) UNIQUE NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -144,21 +140,15 @@ CREATE TABLE IF NOT EXISTS solution_embeddings (
     problem_id INTEGER NOT NULL,
     user_id VARCHAR(255) NOT NULL,
     code TEXT NOT NULL,
-    embedding vector(1536),
+    embedding real[],
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(problem_id, user_id)
 );
 
 -- Index for similarity search
-CREATE INDEX IF NOT EXISTS idx_solution_embeddings_embedding 
-ON solution_embeddings USING ivfflat (embedding vector_cosine_ops)
-WITH (lists = 100);
+CREATE INDEX IF NOT EXISTS idx_solution_embeddings_problem_id ON solution_embeddings(problem_id);
 
 -- Insert sample data
-INSERT INTO users (user_id, username, email, password_hash) VALUES
-('user-1', 'admin', 'admin@codearena.com', '$2a$10$XIX1QZ2Z3Z4Z5Z6Z7Z8Z9Z0Z1Z2Z3Z4Z5Z6Z7Z8Z9Z0Z1Z2Z3Z4Z5Z6Z7Z8Z9Z0')
-ON CONFLICT (user_id) DO NOTHING;
-
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$

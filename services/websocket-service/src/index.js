@@ -2,8 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const amqp = require('amqplib');
-const redis = require('redis');
-const jwt = require('jsonwebtoken');
+const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 const winston = require('winston');
 require('dotenv').config();
@@ -33,37 +32,16 @@ const io = new Server(server, {
   }
 });
 
-// Redis client for leaderboard and caching
-let redisClient = null;
-try {
-  redisClient = redis.createClient({
-    socket: {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: process.env.REDIS_PORT || 6379
-    },
-    password: process.env.REDIS_PASSWORD
-  });
-
-  redisClient.on('error', () => {
-    logger.warn('Redis unavailable; leaderboard updates will be disabled');
-  });
-
-  redisClient.connect().catch(err => {
-    logger.warn('Redis unavailable; leaderboard updates will be disabled', err);
-    redisClient = null;
-  });
-} catch (error) {
-  logger.warn('Redis unavailable; leaderboard updates will be disabled', error);
-  redisClient = null;
-}
-
 // RabbitMQ connection
 let rabbitmqChannel;
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://localhost';
 const RESULT_EXCHANGE = 'codearena.results';
 
-// JWT Secret
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// JWT Secret is no longer required for Supabase token validation, but kept for compatibility
+const JWT_SECRET = process.env.JWT_SECRET || 'codearena-secret-key-2024';
 
 // Store connected users: { userId: { socketId, contestId } }
 const connectedUsers = new Map();
@@ -123,7 +101,7 @@ async function handleExecutionResult(result) {
       logger.info(`Sent result to user ${userId} for submission ${submissionId}`);
     }
 
-    // If this is a contest submission and accepted, update leaderboard
+    // If this is a contest submission and accepted, update leaderboard through contest-service
     if (contestId && status === 'ACCEPTED') {
       await updateLeaderboard(contestId, userId, submissionId);
     }
@@ -133,26 +111,18 @@ async function handleExecutionResult(result) {
   }
 }
 
-// Update leaderboard in Redis and notify contest participants
+// Update leaderboard through contest service and notify contest participants
+const CONTEST_SERVICE_URL = process.env.CONTEST_SERVICE_URL || 'http://contest-service:3005';
+
 async function updateLeaderboard(contestId, userId, submissionId) {
   try {
-    // Increment user score in Redis sorted set
-    if (!redisClient) {
-      return;
-    }
+    const updateUrl = `${CONTEST_SERVICE_URL}/contests/${contestId}/leaderboard`;
+    await axios.post(updateUrl, { userId, score: 10 }, {
+      headers: { 'Content-Type': 'application/json' }
+    });
 
-    const leaderboardKey = `contest:${contestId}:leaderboard`;
-    await redisClient.zIncrBy(leaderboardKey, 10, userId); // 10 points per accepted submission
-
-    // Get updated leaderboard
-    const leaderboard = await redisClient.zRevRangeWithScores(
-      leaderboardKey,
-      0,
-      -1,
-      'WITHSCORES'
-    );
-
-    // Emit leaderboard update to all users in contest room
+    const leaderboardRes = await axios.get(`${CONTEST_SERVICE_URL}/contests/${contestId}/leaderboard`);
+    const leaderboard = leaderboardRes.data;
     if (contestRooms.has(contestId)) {
       const roomSockets = contestRooms.get(contestId);
       roomSockets.forEach(socketId => {
@@ -160,16 +130,35 @@ async function updateLeaderboard(contestId, userId, submissionId) {
           contestId,
           leaderboard: leaderboard.map((entry, index) => ({
             rank: index + 1,
-            userId: entry.value,
-            score: Math.round(entry.score)
+            userId: entry.userId || entry.value,
+            score: entry.score != null ? Math.round(entry.score) : entry.score
           }))
         });
       });
-      logger.info(`Leaderboard updated for contest ${contestId}`);
+      logger.info(`Leaderboard update dispatched for contest ${contestId}`);
     }
-
   } catch (error) {
-    logger.error('Error updating leaderboard:', error);
+    logger.error('Error updating leaderboard via contest-service:', error);
+  }
+}
+
+async function validateSupabaseToken(token) {
+  try {
+    const response = await axios.get(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    return { user: response.data };
+  } catch (error) {
+    return {
+      error: true,
+      message: error.response?.data?.message || error.message,
+      status: error.response?.status
+    };
   }
 }
 
@@ -182,9 +171,14 @@ io.use(async (socket, next) => {
       return next(new Error('Authentication error'));
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET);
-    socket.userId = decoded.id;
-    socket.username = decoded.username;
+    const { user, error } = await validateSupabaseToken(token);
+    if (error || !user) {
+      logger.error('Socket authentication error: invalid token', error);
+      return next(new Error('Authentication error'));
+    }
+
+    socket.userId = user.id;
+    socket.username = user.user_metadata?.username || user.email || user.id;
     next();
   } catch (error) {
     logger.error('Socket authentication error:', error);
@@ -224,23 +218,19 @@ io.on('connection', (socket) => {
       contestRooms.get(contestId).add(socket.id);
 
       // Send current leaderboard to user
-      if (redisClient) {
-        const leaderboardKey = `contest:${contestId}:leaderboard`;
-        const leaderboard = await redisClient.zRevRangeWithScores(
-          leaderboardKey,
-          0,
-          -1,
-          'WITHSCORES'
-        );
-
+      try {
+        const leaderboardRes = await axios.get(`${CONTEST_SERVICE_URL}/contests/${contestId}/leaderboard`);
+        const leaderboard = leaderboardRes.data;
         socket.emit('leaderboard-updated', {
           contestId,
           leaderboard: leaderboard.map((entry, index) => ({
             rank: index + 1,
-            userId: entry.value,
-            score: Math.round(entry.score)
+            userId: entry.userId || entry.value,
+            score: entry.score != null ? Math.round(entry.score) : entry.score
           }))
         });
+      } catch (error) {
+        logger.warn('Failed to fetch contest leaderboard on join:', error);
       }
 
       logger.info(`User ${username} joined contest ${contestId}`);

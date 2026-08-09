@@ -2,7 +2,6 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
 
 const express = require('express');
-const jwt = require('jsonwebtoken');
 const redis = require('redis');
 const axios = require('axios');
 const cors = require('cors');
@@ -86,8 +85,28 @@ const circuitBreakerState = {
   }
 };
 
-// JWT Secret
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+// JWT Secret (kept for backward compatibility, but Supabase Auth is the primary auth system)
+const JWT_SECRET = process.env.JWT_SECRET || 'codearena-secret-key-2024';
+
+async function validateSupabaseToken(token) {
+  try {
+    const response = await axios.get(`${process.env.SUPABASE_URL}/auth/v1/user`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    return { user: response.data };
+  } catch (error) {
+    return {
+      error: true,
+      message: error.response?.data?.message || error.message,
+      status: error.response?.status
+    };
+  }
+}
 
 // Middleware: Correlation ID
 app.use((req, res, next) => {
@@ -108,7 +127,7 @@ app.use((req, res, next) => {
 });
 
 // Middleware: JWT Authentication
-const authenticateToken = (req, res, next) => {
+const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -116,18 +135,22 @@ const authenticateToken = (req, res, next) => {
     return res.status(401).json({ error: 'Access token required' });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      logger.error({
-        correlationId: req.correlationId,
-        error: 'Invalid token',
-        details: err.message
-      });
-      return res.status(403).json({ error: 'Invalid or expired token' });
-    }
-    req.user = user;
-    next();
-  });
+  const { user, error } = await validateSupabaseToken(token);
+  if (error) {
+    logger.error({
+      correlationId: req.correlationId,
+      error: 'Invalid token',
+      details: error?.message || `status=${error?.status}`
+    });
+    return res.status(403).json({ error: 'Invalid or expired token' });
+  }
+
+  req.user = {
+    id: user.id,
+    email: user.email,
+    username: user.user_metadata?.username || null
+  };
+  next();
 };
 
 // Middleware: Redis-based Rate Limiting (Sliding Window)
@@ -333,11 +356,30 @@ const handleRegister = async (req, res) => {
       return res.status(500).json({ error: 'Failed to create user profile' });
     }
 
-    const token = jwt.sign(
-      { id: profileData.id, username: profileData.username, email: profileData.email },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+    let accessToken = authData.session?.access_token;
+    if (!accessToken) {
+      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (loginError || !loginData.session?.access_token) {
+        logger.error({
+          correlationId: req.correlationId,
+          error: loginError?.message || 'Failed to obtain access token after signup'
+        });
+        return res.status(500).json({ error: 'Unable to create user session' });
+      }
+      accessToken = loginData.session.access_token;
+    }
+
+    logger.info({
+      correlationId: req.correlationId,
+      userId: profileData.id,
+      message: 'User registered successfully'
+    });
+
+    res.json({ token: accessToken, userId: profileData.id, username: profileData.username, email: profileData.email });
 
     logger.info({
       correlationId: req.correlationId,
@@ -365,10 +407,10 @@ const handleLogin = async (req, res) => {
       password
     });
 
-    if (authError) {
+    if (authError || !authData.session?.access_token) {
       logger.error({
         correlationId: req.correlationId,
-        error: authError.message
+        error: authError?.message || 'Invalid credentials'
       });
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -388,11 +430,7 @@ const handleLogin = async (req, res) => {
       return res.status(500).json({ error: 'Failed to fetch user profile' });
     }
 
-    const token = jwt.sign(
-      { id: profileData.id, username: profileData.username, email: profileData.email },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+    const accessToken = authData.session.access_token;
 
     logger.info({
       correlationId: req.correlationId,
@@ -400,7 +438,7 @@ const handleLogin = async (req, res) => {
       message: 'User logged in successfully'
     });
 
-    res.json({ token, userId: profileData.id, username: profileData.username, email: profileData.email });
+    res.json({ token: accessToken, userId: profileData.id, username: profileData.username, email: profileData.email });
   } catch (error) {
     logger.error({
       correlationId: req.correlationId,
@@ -410,18 +448,79 @@ const handleLogin = async (req, res) => {
   }
 };
 
-const handleMe = (req, res) => {
+const handleMe = async (req, res) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
   if (!token) {
     return res.status(401).json({ error: 'Access token required' });
   }
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({ error: 'Invalid or expired token' });
+
+  const { user, error } = await validateSupabaseToken(token);
+  if (error || !user) {
+    return res.status(403).json({ error: 'Invalid or expired token' });
+  }
+
+  const { data: profileData, error: profileError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  if (profileError || !profileData) {
+    logger.warn({
+      correlationId: req.correlationId,
+      error: profileError?.message,
+      message: 'Unable to fetch user profile; returning auth profile data only'
+    });
+
+    return res.json({ userId: user.id, username: user.user_metadata?.username || null, email: user.email });
+  }
+
+  res.json({ userId: profileData.id, username: profileData.username, email: profileData.email });
+};
+
+const handlePasswordReset = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  try {
+    // Prefer using the Supabase client SDK which is initialized with the service role key.
+    // Use `resetPasswordForEmail` when available, otherwise fall back to the REST endpoint.
+    const redirectTo = process.env.FRONTEND_URL
+      ? `${process.env.FRONTEND_URL}/reset-password`
+      : undefined;
+
+    if (supabase && typeof supabase.auth?.resetPasswordForEmail === 'function') {
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: redirectTo });
+      if (error) {
+        logger.error({ correlationId: req.correlationId, error: error.message });
+        return res.status(500).json({ error: 'Unable to process password reset request' });
+      }
+      return res.status(200).json({ message: 'If the email exists, password reset instructions have been sent.' });
     }
-    res.json({ userId: user.id, username: user.username, email: user.email });
-  });
+
+    // Fallback: call Supabase recover REST endpoint without exposing the response details.
+    await axios.post(`${process.env.SUPABASE_URL}/auth/v1/recover`, {
+      email,
+      redirect_to: redirectTo
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY
+      }
+    });
+
+    return res.status(200).json({ message: 'If the email exists, password reset instructions have been sent.' });
+  } catch (error) {
+    logger.error({
+      correlationId: req.correlationId,
+      error: error.message
+    });
+    return res.status(500).json({ error: 'Unable to process password reset request' });
+  }
 };
 
 // Auth endpoints (both /auth and /api/auth for frontend compatibility)
@@ -429,6 +528,8 @@ app.post('/auth/register', handleRegister);
 app.post('/api/auth/register', handleRegister);
 app.post('/auth/login', handleLogin);
 app.post('/api/auth/login', handleLogin);
+app.post('/auth/reset-password', handlePasswordReset);
+app.post('/api/auth/reset-password', handlePasswordReset);
 app.get('/auth/me', handleMe);
 app.get('/api/auth/me', handleMe);
 

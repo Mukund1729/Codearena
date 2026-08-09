@@ -8,6 +8,7 @@ import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.model.Bind;
 import com.github.dockerjava.api.model.HostConfig;
 import com.github.dockerjava.api.model.Volume;
+import com.github.dockerjava.api.model.Capability;
 import com.github.dockerjava.core.command.ExecStartResultCallback;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +20,8 @@ import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -31,7 +34,7 @@ public class DockerExecutionService implements ExecutionService {
 
     private static final long MEMORY_LIMIT = 256L * 1024 * 1024; // 256MB
     private static final long CPU_LIMIT = 500_000_000L;          // 0.5 cores
-    private static final int TIMEOUT_SECONDS = 3;
+    private static final int TIMEOUT_SECONDS = 2;
 
     @Override
     public ExecutionResult executeCode(String code, String language, String dockerImage, List<TestCase> testCases) {
@@ -50,11 +53,14 @@ public class DockerExecutionService implements ExecutionService {
                     .withMemory(MEMORY_LIMIT)
                     .withNanoCPUs(CPU_LIMIT)
                     .withNetworkMode("none")
+                    .withPidsLimit(64L)
+                    .withCapDrop(Capability.ALL)
                     .withBinds(new Bind(tempDir.getAbsolutePath(), new Volume("/app")));
 
-            CreateContainerResponse container = dockerClient.createContainerCmd(dockerImage)
+                CreateContainerResponse container = dockerClient.createContainerCmd(dockerImage)
                     .withHostConfig(hostConfig)
                     .withWorkingDir("/app")
+                    .withUser("65534:65534")
                     .withCmd("tail", "-f", "/dev/null")
                     .exec();
 
