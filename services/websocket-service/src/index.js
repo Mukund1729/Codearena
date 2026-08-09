@@ -293,7 +293,6 @@ app.get('/health', (req, res) => {
     connectedUsers: connectedUsers.size,
     rabbitmq: rabbitmqChannel ? 'connected' : 'disconnected',
   });
-  });
 });
 
 // Get connected users count
@@ -334,4 +333,5 @@ process.on('SIGTERM', async () => {
     logger.info('HTTP server closed');
     process.exit(0);
   });
+});
 });
