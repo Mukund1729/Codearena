@@ -47,15 +47,15 @@ services:
       - key: SERVER_PORT
         value: 3001
       - key: POSTGRES_HOST
-        sync: false
+        value: dmttmadjkjydpjhgvnei.supabase.co
       - key: POSTGRES_PORT
         value: 5432
       - key: POSTGRES_DB
-        sync: false
+        value: postgres
       - key: POSTGRES_USER
-        sync: false
+        value: postgres
       - key: POSTGRES_PASSWORD
-        sync: false
+        value: Mukund@2004@
 
   # Submission Service
   - type: web
@@ -99,15 +99,15 @@ services:
       - key: SERVER_PORT
         value: 3003
       - key: POSTGRES_HOST
-        sync: false
+        value: dmttmadjkjydpjhgvnei.supabase.co
       - key: POSTGRES_PORT
         value: 5432
       - key: POSTGRES_DB
-        sync: false
+        value: postgres
       - key: POSTGRES_USER
-        sync: false
+        value: postgres
       - key: POSTGRES_PASSWORD
-        sync: false
+        value: Mukund@2004@
       - key: RABBITMQ_URL
         value: amqps://ybijdlah:mlKNrPypZRtGTV-LLgItyujraCG89WG@warthog.lmq.cloudamqp.com/ybijdlah
       - key: RABBITMQ_HOST
@@ -117,7 +117,7 @@ services:
       - key: RABBITMQ_USER
         value: guest
       - key: RABBITMQ_PASSWORD
-        sync: false
+        value: guest
       - key: RABBITMQ_SSL_ENABLED
         value: true
       - key: EXECUTION_MODE
@@ -165,15 +165,15 @@ services:
       - key: SERVER_PORT
         value: 3005
       - key: POSTGRES_HOST
-        sync: false
+        value: dmttmadjkjydpjhgvnei.supabase.co
       - key: POSTGRES_PORT
         value: 5432
       - key: POSTGRES_DB
-        sync: false
+        value: postgres
       - key: POSTGRES_USER
-        sync: false
+        value: postgres
       - key: POSTGRES_PASSWORD
-        sync: false
+        value: Mukund@2004@
       - key: REDIS_URL
         value: redis://default:gQAAAAAAAu6WAAIgcDJmMzdkNTI5MDljOWY0YmI1OGJhYTllYzgwNDNjZjVhNg@helped-bee-192150.upstash.io:6379
       - key: REDIS_HOST
@@ -181,7 +181,7 @@ services:
       - key: REDIS_PORT
         value: 6379
       - key: REDIS_PASSWORD
-        sync: false
+        value: gQAAAAAAAu6WAAIgcDJmMzdkNTI5MDljOWY0YmI1OGJhYTllYzgwNDNjZjVhNg
       - key: REDIS_SSL_ENABLED
         value: true
 
