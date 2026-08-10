@@ -47,13 +47,13 @@ services:
       - key: SERVER_PORT
         value: 3001
       - key: POSTGRES_HOST
-        value: dmttmadjkjydpjhgvnei.supabase.co
+        value: aws-0-ap-southeast-1.pooler.supabase.com
       - key: POSTGRES_PORT
         value: 5432
       - key: POSTGRES_DB
         value: postgres
       - key: POSTGRES_USER
-        value: postgres
+        value: postgres.dmttmadjkjydpjhgvnei
       - key: POSTGRES_PASSWORD
         value: Mukund@2004@
 
@@ -99,13 +99,13 @@ services:
       - key: SERVER_PORT
         value: 3003
       - key: POSTGRES_HOST
-        value: dmttmadjkjydpjhgvnei.supabase.co
+        value: aws-0-ap-southeast-1.pooler.supabase.com
       - key: POSTGRES_PORT
         value: 5432
       - key: POSTGRES_DB
         value: postgres
       - key: POSTGRES_USER
-        value: postgres
+        value: postgres.dmttmadjkjydpjhgvnei
       - key: POSTGRES_PASSWORD
         value: Mukund@2004@
       - key: RABBITMQ_URL
@@ -165,13 +165,13 @@ services:
       - key: SERVER_PORT
         value: 3005
       - key: POSTGRES_HOST
-        value: dmttmadjkjydpjhgvnei.supabase.co
+        value: aws-0-ap-southeast-1.pooler.supabase.com
       - key: POSTGRES_PORT
         value: 5432
       - key: POSTGRES_DB
         value: postgres
       - key: POSTGRES_USER
-        value: postgres
+        value: postgres.dmttmadjkjydpjhgvnei
       - key: POSTGRES_PASSWORD
         value: Mukund@2004@
       - key: REDIS_URL
