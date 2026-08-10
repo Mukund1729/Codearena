@@ -23,10 +23,13 @@ spring:
         format_sql: true
 
   rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
+    # Support both RABBITMQ_URL (cloud) and separate vars (local)
+    addresses: ${RABBITMQ_URL:amqp://${RABBITMQ_HOST:localhost}:${RABBITMQ_PORT:5672}}
     username: ${RABBITMQ_USER:guest}
     password: ${RABBITMQ_PASSWORD:guest}
+    # SSL support for CloudAMQP (requires amqps:// URL)
+    ssl:
+      enabled: ${RABBITMQ_SSL_ENABLED:false}
 
 rabbitmq:
   queue:
@@ -37,6 +40,10 @@ rabbitmq:
 docker:
   host: ${DOCKER_HOST:unix:///var/run/docker.sock}
   enabled: true
+
+# Execution mode: docker (sandboxed) or process (degraded, no isolation)
+execution:
+  mode: ${EXECUTION_MODE:docker}
 
 logging:
   level:

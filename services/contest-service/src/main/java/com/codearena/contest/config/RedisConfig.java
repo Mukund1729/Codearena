@@ -12,6 +12,9 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @Configuration
 public class RedisConfig {
 
+    @Value("${spring.data.redis.url:}")
+    private String redisUrl;
+
     @Value("${spring.data.redis.host:localhost}")
     private String redisHost;
 
@@ -23,13 +26,20 @@ public class RedisConfig {
 
     @Bean
     public LettuceConnectionFactory redisConnectionFactory() {
-        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
-        config.setHostName(redisHost);
-        config.setPort(redisPort);
-        if (!redisPassword.isEmpty()) {
-            config.setPassword(redisPassword);
+        // Support both REDIS_URL (cloud) and separate vars (local)
+        if (redisUrl != null && !redisUrl.isEmpty()) {
+            // Cloud Redis URL format: rediss://default:password@host.upstash.io:6379
+            return new LettuceConnectionFactory(redisUrl);
+        } else {
+            // Local development with separate variables
+            RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
+            config.setHostName(redisHost);
+            config.setPort(redisPort);
+            if (!redisPassword.isEmpty()) {
+                config.setPassword(redisPassword);
+            }
+            return new LettuceConnectionFactory(config);
         }
-        return new LettuceConnectionFactory(config);
     }
 
     @Bean
