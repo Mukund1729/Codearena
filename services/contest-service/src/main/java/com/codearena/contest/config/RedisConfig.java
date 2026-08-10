@@ -28,8 +28,10 @@ public class RedisConfig {
     public LettuceConnectionFactory redisConnectionFactory() {
         // Support both REDIS_URL (cloud) and separate vars (local)
         if (redisUrl != null && !redisUrl.isEmpty()) {
-            // Cloud Redis URL format: rediss://default:password@host.upstash.io:6379
-            return new LettuceConnectionFactory(redisUrl);
+            // Cloud Redis URL format: redis://default:password@host.upstash.io:6379
+            // Parse URL and create configuration
+            RedisStandaloneConfiguration config = parseRedisUrl(redisUrl);
+            return new LettuceConnectionFactory(config);
         } else {
             // Local development with separate variables
             RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
@@ -40,6 +42,45 @@ public class RedisConfig {
             }
             return new LettuceConnectionFactory(config);
         }
+    }
+
+    private RedisStandaloneConfiguration parseRedisUrl(String url) {
+        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
+        
+        try {
+            // Parse URL format: redis://default:password@host:port
+            // or: rediss://default:password@host:port (SSL)
+            String cleanUrl = url.replace("redis://", "").replace("rediss://", "");
+            
+            // Split by @ to separate credentials from host:port
+            String[] parts = cleanUrl.split("@");
+            if (parts.length == 2) {
+                String[] credentials = parts[0].split(":");
+                if (credentials.length >= 2) {
+                    config.setPassword(credentials[1]);
+                }
+                
+                // Parse host:port
+                String[] hostPort = parts[1].split(":");
+                config.setHostName(hostPort[0]);
+                if (hostPort.length > 1) {
+                    config.setPort(Integer.parseInt(hostPort[1]));
+                }
+            } else {
+                // Simple format without credentials
+                String[] hostPort = parts[0].split(":");
+                config.setHostName(hostPort[0]);
+                if (hostPort.length > 1) {
+                    config.setPort(Integer.parseInt(hostPort[1]));
+                }
+            }
+        } catch (Exception e) {
+            // Fallback to localhost if parsing fails
+            config.setHostName("localhost");
+            config.setPort(6379);
+        }
+        
+        return config;
     }
 
     @Bean
