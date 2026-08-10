@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 public class SubmissionUpdateService {
 
     private final JdbcTemplate jdbcTemplate;
+    @Qualifier("rabbitTemplate")
     private final AmqpTemplate amqpTemplate;
     @Qualifier("resultExchange")
     private final FanoutExchange resultExchange;
