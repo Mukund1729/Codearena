@@ -55,7 +55,7 @@ services:
       - key: POSTGRES_USER
         value: postgres.dmttmadjkjydpjhgvnei
       - key: POSTGRES_PASSWORD
-        value: Mukund@2004@
+        value: Mukund@12n
 
   # Submission Service
   - type: web
@@ -107,7 +107,7 @@ services:
       - key: POSTGRES_USER
         value: postgres.dmttmadjkjydpjhgvnei
       - key: POSTGRES_PASSWORD
-        value: Mukund@2004@
+        value: Mukund@12n
       - key: RABBITMQ_URL
         value: amqps://ybijdlah:mlKNrPypZRtGTV-LLgItyujraCG89WG@warthog.lmq.cloudamqp.com/ybijdlah
       - key: RABBITMQ_HOST
@@ -173,7 +173,7 @@ services:
       - key: POSTGRES_USER
         value: postgres.dmttmadjkjydpjhgvnei
       - key: POSTGRES_PASSWORD
-        value: Mukund@2004@
+        value: Mukund@12n
       - key: REDIS_URL
         value: redis://default:gQAAAAAAAu6WAAIgcDJmMzdkNTI5MDljOWY0YmI1OGJhYTllYzgwNDNjZjVhNg@helped-bee-192150.upstash.io:6379
       - key: REDIS_HOST
