@@ -82,12 +82,6 @@
             <version>3.3.6</version>
         </dependency>
 
-        <!-- JAX-RS API for Docker Java client -->
-        <dependency>
-            <groupId>javax.ws.rs</groupId>
-            <artifactId>javax.ws.rs-api</artifactId>
-            <version>2.1.1</version>
-        </dependency>
 
         <!-- Lombok -->
         <dependency>

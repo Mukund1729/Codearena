@@ -2,8 +2,9 @@ package com.codearena.execution.config;
 
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.core.DefaultDockerClientConfig;
-import com.github.dockerjava.core.DockerClientBuilder;
 import com.github.dockerjava.core.DockerClientConfig;
+import com.github.dockerjava.core.DockerClientImpl;
+import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -22,6 +23,10 @@ public class DockerConfig {
             .withDockerHost(dockerHost)
             .build();
 
-        return DockerClientBuilder.getInstance(config).build();
+        ApacheDockerHttpClient httpClient = new ApacheDockerHttpClient.Builder()
+            .dockerHost(config.getDockerHost())
+            .build();
+
+        return DockerClientImpl.getInstance(config, httpClient);
     }
 }
