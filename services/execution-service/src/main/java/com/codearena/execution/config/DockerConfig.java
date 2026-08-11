@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@ConditionalOnProperty(name = "docker.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "execution.mode", havingValue = "docker")
 public class DockerConfig {
 
     @Value("${docker.host:unix:///var/run/docker.sock}")

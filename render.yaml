@@ -11,13 +11,13 @@ services:
       - key: SUPABASE_URL
         value: https://dmttmadjkjydpjhgvnei.supabase.co
       - key: SUPABASE_ANON_KEY
-        value: sb_publishable_PzuOo_2Xdwpe_oFv_6LMlQ_UpvQmb2m
+        sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
       - key: JWT_SECRET
         sync: false
       - key: REDIS_URL
-        value: redis://default:gQAAAAAAAu6WAAIgcDJmMzdkNTI5MDljOWY0YmI1OGJhYTllYzgwNDNjZjVhNg@helped-bee-192150.upstash.io:6379
+        sync: false
       - key: REDIS_HOST
         value: localhost
       - key: REDIS_PORT
@@ -30,10 +30,14 @@ services:
         value: https://codearena-submission-service.onrender.com
       - key: EXECUTION_SERVICE_URL
         value: https://codearena-execution-service.onrender.com
+      - key: CONTEST_SERVICE_URL
+        value: https://codearena-contest-service.onrender.com
       - key: AI_REVIEW_SERVICE_URL
         value: https://codearena-ai-review-service.onrender.com
       - key: WEBSOCKET_SERVICE_URL
         value: https://codearena-websocket-service.onrender.com
+      - key: FRONTEND_URL
+        sync: false
 
   # Problem Service (Java)
   - type: web
@@ -57,7 +61,7 @@ services:
       - key: POSTGRES_USER
         value: postgres.dmttmadjkjydpjhgvnei
       - key: POSTGRES_PASSWORD
-        value: Mukund12n@@
+        sync: false
 
   # Submission Service
   - type: web
@@ -79,7 +83,7 @@ services:
       - key: POSTGRES_PASSWORD
         sync: false
       - key: RABBITMQ_URL
-        value: amqps://ybijdlah:mlKNrPypZRtGTV-LLgItyujraCG89WG@warthog.lmq.cloudamqp.com/ybijdlah
+        sync: false
       - key: RABBITMQ_HOST
         value: localhost
       - key: RABBITMQ_PORT
@@ -111,9 +115,9 @@ services:
       - key: POSTGRES_USER
         value: postgres.dmttmadjkjydpjhgvnei
       - key: POSTGRES_PASSWORD
-        value: Mukund12n@@
+        sync: false
       - key: RABBITMQ_URL
-        value: amqps://ybijdlah:mlKNrPypZRtGTV-LLgItyujraCG89WG@warthog.lmq.cloudamqp.com/ybijdlah
+        sync: false
       - key: RABBITMQ_HOST
         value: localhost
       - key: RABBITMQ_PORT
@@ -121,7 +125,7 @@ services:
       - key: RABBITMQ_USER
         value: guest
       - key: RABBITMQ_PASSWORD
-        value: guest
+        sync: false
       - key: RABBITMQ_SSL_ENABLED
         value: true
       - key: EXECUTION_MODE
@@ -139,7 +143,7 @@ services:
       - key: PORT
         value: 3004
       - key: RABBITMQ_URL
-        value: amqps://ybijdlah:mlKNrPypZRtGTV-LLgItyujraCG89WG@warthog.lmq.cloudamqp.com/ybijdlah
+        sync: false
       - key: RABBITMQ_HOST
         value: localhost
       - key: RABBITMQ_PORT
@@ -179,15 +183,15 @@ services:
       - key: POSTGRES_USER
         value: postgres.dmttmadjkjydpjhgvnei
       - key: POSTGRES_PASSWORD
-        value: Mukund12n@@
+        sync: false
       - key: REDIS_URL
-        value: redis://default:gQAAAAAAAu6WAAIgcDJmMzdkNTI5MDljOWY0YmI1OGJhYTllYzgwNDNjZjVhNg@helped-bee-192150.upstash.io:6379
+        sync: false
       - key: REDIS_HOST
         value: localhost
       - key: REDIS_PORT
         value: 6379
       - key: REDIS_PASSWORD
-        value: gQAAAAAAAu6WAAIgcDJmMzdkNTI5MDljOWY0YmI1OGJhYTllYzgwNDNjZjVhNg
+        sync: false
       - key: REDIS_SSL_ENABLED
         value: true
 
