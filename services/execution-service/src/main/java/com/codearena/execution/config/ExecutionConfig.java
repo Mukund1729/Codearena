@@ -5,6 +5,7 @@ import com.codearena.execution.service.ExecutionService;
 import com.codearena.execution.service.ProcessExecutionService;
 import com.github.dockerjava.api.DockerClient;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -22,16 +23,24 @@ public class ExecutionConfig {
     @Primary
     public ExecutionService executionService(
             DockerClient dockerClient,
-            DockerExecutionService dockerExecutionService,
-            ProcessExecutionService processExecutionService) {
-        
+            @Autowired(required = false) DockerExecutionService dockerExecutionService,
+            @Autowired(required = false) ProcessExecutionService processExecutionService) {
+
         log.info("Execution mode: {}", executionMode);
-        
+
         if ("process".equalsIgnoreCase(executionMode)) {
+            if (processExecutionService == null) {
+                log.warn("⚠️  ProcessExecutionService not available, creating fallback");
+                return new ProcessExecutionService();
+            }
             log.warn("⚠️  USING PROCESS EXECUTION MODE - NO DOCKER SANDBOXING");
             log.warn("⚠️  This is a degraded mode for platforms without Docker socket access");
             return processExecutionService;
         } else {
+            if (dockerExecutionService == null) {
+                log.warn("⚠️  DockerExecutionService not available, falling back to process mode");
+                return new ProcessExecutionService();
+            }
             log.info("Using Docker execution mode with sandboxing");
             return dockerExecutionService;
         }
