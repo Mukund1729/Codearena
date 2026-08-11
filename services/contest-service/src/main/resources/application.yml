@@ -1,5 +1,5 @@
 server:
-  port: 3005
+  port: ${PORT:3005}
   servlet:
     context-path: /
 
@@ -14,7 +14,8 @@ spring:
     driver-class-name: org.postgresql.Driver
     hikari:
       connection-timeout: 30000
-      maximum-pool-size: 5
+      maximum-pool-size: 2
+      minimum-idle: 1
 
   jpa:
     hibernate:
