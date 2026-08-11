@@ -11,7 +11,7 @@ services:
       - key: SUPABASE_URL
         value: https://dmttmadjkjydpjhgvnei.supabase.co
       - key: SUPABASE_ANON_KEY
-        sync: false
+        value: sb_publishable_PzuOo_2Xdwpe_oFv_6LMlQ_UpvQmb2m
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
       - key: JWT_SECRET
