@@ -1,0 +1,11 @@
+{
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
+  "installCommand": "cd frontend && npm install",
+  "env": {
+    "VITE_API_URL": "https://codearena-api-gateway.onrender.com/api",
+    "VITE_WS_URL": "wss://codearena-websocket-service.onrender.com",
+    "VITE_SUPABASE_URL": "https://dmttmadjkjydpjhgvnei.supabase.co",
+    "VITE_SUPABASE_ANON_KEY": "sb_publishable_PzuOo_2Xdwpe_oFv_6LMlQ_UpvQmb2m"
+  }
+}
