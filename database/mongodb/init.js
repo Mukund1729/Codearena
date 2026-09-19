@@ -12,8 +12,8 @@ db.createCollection('execution_logs', {
       properties: {
         submissionId: { bsonType: 'string' },
         userId: { bsonType: 'string' },
-        problemId: { bsonType: 'number' },
-        contestId: { bsonType: 'number' },
+        problemId: { bsonType: 'string' },
+        contestId: { bsonType: ['number', 'null'] },
         language: { bsonType: 'string' },
         status: { bsonType: 'string' },
         result: { bsonType: 'string' },

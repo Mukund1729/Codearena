@@ -20,22 +20,6 @@ services:
     networks:
       - codearena-network
 
-  mongodb:
-    image: mongo:7
-    container_name: codearena-mongodb
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-      - ./database/mongodb/init.js:/docker-entrypoint-initdb.d/init.js
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - codearena-network
-
   redis:
     image: redis:7-alpine
     container_name: codearena-redis
@@ -257,7 +241,6 @@ services:
 
 volumes:
   postgres_data:
-  mongodb_data:
   redis_data:
   rabbitmq_data:
 

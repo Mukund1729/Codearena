@@ -8,14 +8,14 @@ A modern distributed online judge platform built for demo, portfolio, and techni
 
 CodeArena simulates a competitive programming platform with the following capabilities:
 
-- User registration, login, and profile management using Supabase Auth
-- Problem browsing, filtering, and detail pages
+- User registration, login, and profile management using Supabase Auth with database triggers
+- Problem browsing, filtering, and detail pages supporting both internal and external platform problems
 - Secure code submission and async execution via RabbitMQ jobs
-- Sandboxed code execution inside Docker containers
-- Live contest leaderboard updates through WebSockets
-- AI-powered code review and plagiarism detection
-- Persistent data storage using PostgreSQL, MongoDB, and Redis
-- Local and cloud-ready deployment with Docker Compose, Kubernetes, and Terraform
+- Sandboxed code execution inside Docker containers (with degraded process mode for platforms without Docker socket)
+- Live contest leaderboard updates through WebSockets and Redis
+- AI-powered code review using OpenAI API (optional feature)
+- Persistent data storage using PostgreSQL, with Redis for caching and leaderboards
+- Local and cloud-ready deployment with Docker Compose, Kubernetes, and Render/Vercel
 
 ---
 
@@ -23,7 +23,7 @@ CodeArena simulates a competitive programming platform with the following capabi
 
 - **Full-stack distributed architecture** with Node.js and Spring Boot services.
 - **Real-time collaboration** via Socket.io and leaderboard streaming.
-- **Secure execution pipeline** that isolates user code in Docker containers.
+- **Secure execution pipeline** that isolates user code in Docker containers with resource limits and security constraints.
 - **Modern auth and API gateway** with Supabase integration and rate limiting.
 - **Resume-ready impact**: demonstrates systems design, cloud-native deployment, event-driven workflows, and real-time UX.
 
@@ -57,7 +57,7 @@ CodeArena simulates a competitive programming platform with the following capabi
 - **Frontend:** React + Vite + Tailwind CSS
 - **API Gateway / Services:** Node.js, Express, Socket.io
 - **Microservices:** Java Spring Boot, RabbitMQ, Docker
-- **Databases:** PostgreSQL, MongoDB, Redis
+- **Databases:** PostgreSQL for transactional data, Redis for caching and leaderboards
 - **Authentication:** Supabase Auth
 - **AI:** OpenAI API for code review
 - **Deployment:** Docker Compose, Kubernetes manifests, Terraform support
@@ -78,7 +78,6 @@ CodeArena simulates a competitive programming platform with the following capabi
 | AI Review Service | `3006` |
 | RabbitMQ | `5672` / `15672` |
 | Redis | `6379` |
-| MongoDB | `27017` |
 | PostgreSQL | `5432` |
 
 ---
