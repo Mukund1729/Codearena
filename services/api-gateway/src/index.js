@@ -353,23 +353,21 @@ const handleRegister = async (req, res) => {
       return res.status(400).json({ error: authError.message });
     }
 
-    // Create user profile in custom users table
+    // User profile is created automatically by database trigger
+    // Try to fetch it, or use the auth user data as fallback
     const { data: profileData, error: profileError } = await supabase
       .from('users')
-      .insert({
-        username,
-        email,
-        id: authData.user.id
-      })
       .select()
+      .eq('id', authData.user.id)
       .single();
 
+    // If profile doesn't exist yet (trigger hasn't fired), use auth user data
     if (profileError) {
-      logger.error({
+      logger.warn({
         correlationId: req.correlationId,
-        error: profileError.message
+        error: 'Profile not found, using auth user data',
+        userId: authData.user.id
       });
-      return res.status(500).json({ error: 'Failed to create user profile' });
     }
 
     let accessToken = authData.session?.access_token;
@@ -391,11 +389,16 @@ const handleRegister = async (req, res) => {
 
     logger.info({
       correlationId: req.correlationId,
-      userId: profileData.id,
+      userId: authData.user.id,
       message: 'User registered successfully'
     });
 
-    res.json({ token: accessToken, userId: profileData.id, username: profileData.username, email: profileData.email });
+    res.json({
+      token: accessToken,
+      userId: authData.user.id,
+      username: profileData?.username || username,
+      email: profileData?.email || email
+    });
   } catch (error) {
     logger.error({
       correlationId: req.correlationId,
