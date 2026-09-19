@@ -6,6 +6,7 @@
     "VITE_PROBLEM_SERVICE_URL": "https://codearena-problem.onrender.com",
     "VITE_EXECUTION_SERVICE_URL": "https://codearena-execution-service.onrender.com",
     "VITE_CONTEST_SERVICE_URL": "https://codearena-rmpu.onrender.com",
+    "VITE_SUBMISSION_SERVICE_URL": "https://codearena-submission-service.onrender.com",
     "VITE_WS_URL": "wss://codearena-websocket-service.onrender.com",
     "VITE_SUPABASE_URL": "https://dmttmadjkjydpjhgvnei.supabase.co",
     "VITE_SUPABASE_ANON_KEY": "sb_publishable_PzuOo_2Xdwpe_oFv_6LMlQ_UpvQmb2m"

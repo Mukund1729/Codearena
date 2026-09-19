@@ -24,7 +24,15 @@ export const contestApi = axios.create({
   },
 })
 
-// Generic API (for backward compatibility)
+// Submission Service API
+export const submissionApi = axios.create({
+  baseURL: import.meta.env.VITE_SUBMISSION_SERVICE_URL || 'https://codearena-submission-service.onrender.com',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+
+// Generic API (for backward compatibility - points to problem service)
 export const api = problemApi
 
 // Add token interceptor to all APIs
@@ -55,5 +63,6 @@ const addTokenInterceptor = (axiosInstance) => {
 addTokenInterceptor(problemApi)
 addTokenInterceptor(executionApi)
 addTokenInterceptor(contestApi)
+addTokenInterceptor(submissionApi)
 
 export default api
