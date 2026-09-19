@@ -23,7 +23,7 @@ public class ContestProblem {
     private Contest contest;
 
     @Column(nullable = false)
-    private Long problemId;
+    private String problemId;
 
     @Column(nullable = false)
     private Integer problemOrder;

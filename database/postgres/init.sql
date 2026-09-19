@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS contests (
 CREATE TABLE IF NOT EXISTS contest_problems (
     id SERIAL PRIMARY KEY,
     contest_id INTEGER NOT NULL REFERENCES contests(id) ON DELETE CASCADE,
-    problem_id INTEGER NOT NULL,
+    problem_id VARCHAR(100) NOT NULL,
     problem_order INTEGER NOT NULL,
     points INTEGER NOT NULL,
     UNIQUE(contest_id, problem_id)
@@ -137,7 +137,7 @@ CREATE INDEX IF NOT EXISTS idx_submissions_problem_id ON submissions(problem_id)
 -- Solution embeddings table for plagiarism detection
 CREATE TABLE IF NOT EXISTS solution_embeddings (
     id SERIAL PRIMARY KEY,
-    problem_id INTEGER NOT NULL,
+    problem_id VARCHAR(100) NOT NULL,
     user_id VARCHAR(255) NOT NULL,
     code TEXT NOT NULL,
     embedding real[],
