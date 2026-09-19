@@ -52,7 +52,7 @@ async function initializeDatabase() {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS solution_embeddings (
         id SERIAL PRIMARY KEY,
-        problem_id INTEGER NOT NULL,
+        problem_id VARCHAR(100) NOT NULL,
         user_id VARCHAR(255) NOT NULL,
         code TEXT NOT NULL,
         embedding real[],

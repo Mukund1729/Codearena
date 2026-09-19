@@ -54,6 +54,9 @@ CREATE TABLE IF NOT EXISTS test_cases (
     UNIQUE(problem_id, test_case_number)
 );
 
+-- Note: test_cases.problem_id remains INTEGER as it references internal problems table only
+-- External platform problems (Kattis, Codeforces) don't have test cases stored in this table
+
 -- Editorials table
 CREATE TABLE IF NOT EXISTS editorials (
     id SERIAL PRIMARY KEY,
