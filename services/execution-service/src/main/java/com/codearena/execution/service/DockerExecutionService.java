@@ -54,6 +54,8 @@ public class DockerExecutionService implements ExecutionService {
                     .withNetworkMode("none")
                     .withPidsLimit(64L)
                     .withCapDrop(Capability.ALL)
+                    .withReadonlyRootfs(true)
+                    .withTmpfs(Collections.singletonMap("/tmp", "rw,size=100m"))
                     .withBinds(new Bind(tempDir.getAbsolutePath(), new Volume("/app")));
 
                 CreateContainerResponse container = dockerClient.createContainerCmd(dockerImage)

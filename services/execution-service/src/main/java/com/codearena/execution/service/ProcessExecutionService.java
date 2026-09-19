@@ -78,12 +78,24 @@ public class ProcessExecutionService implements ExecutionService {
             String fileName, String input, String expectedOutput, int tcNum) {
         try {
             String inputFileName = "input_" + tcNum + ".txt";
-            Files.write(new File(tempDir, inputFileName).toPath(), input.getBytes(StandardCharsets.UTF_8));
+            File inputFile = new File(tempDir, inputFileName);
+            Files.write(inputFile.toPath(), input.getBytes(StandardCharsets.UTF_8));
 
-            String[] command = getExecCommand(language, fileName, inputFileName);
+            // Compile if needed (Java, C++)
+            if (!compileIfNeeded(tempDir, language, fileName)) {
+                return TestCaseResult.builder()
+                        .testCaseNumber(tcNum)
+                        .status("COMPILATION_ERROR")
+                        .expectedOutput(expectedOutput)
+                        .stderr("Compilation failed")
+                        .build();
+            }
+
+            String[] command = getExecCommand(language, fileName);
             ProcessBuilder processBuilder = new ProcessBuilder(command);
             processBuilder.directory(tempDir);
             processBuilder.redirectErrorStream(true);
+            processBuilder.redirectInput(inputFile);
 
             Process process = processBuilder.start();
 
@@ -128,14 +140,59 @@ public class ProcessExecutionService implements ExecutionService {
         }
     }
 
-    private String[] getExecCommand(String lang, String file, String inputFile) {
+    private String[] getExecCommand(String lang, String file) {
         return switch (lang.toLowerCase()) {
             case "python" -> new String[]{"python3", file};
-            case "java" -> new String[]{"javac", file};
-            case "cpp" -> new String[]{"g++", "-o", "solution", file};
+            case "java" -> new String[]{"java", "Solution"};
+            case "cpp" -> new String[]{"./solution"};
             case "javascript" -> new String[]{"node", file};
             default -> throw new IllegalArgumentException("Unsupported language: " + lang);
         };
+    }
+
+    private boolean compileIfNeeded(File tempDir, String language, String fileName) {
+        if (!language.equals("java") && !language.equals("cpp")) {
+            return true; // No compilation needed
+        }
+
+        try {
+            String[] compileCommand;
+            if (language.equals("java")) {
+                compileCommand = new String[]{"javac", fileName};
+            } else { // cpp
+                compileCommand = new String[]{"g++", "-o", "solution", fileName};
+            }
+
+            ProcessBuilder pb = new ProcessBuilder(compileCommand);
+            pb.directory(tempDir);
+            pb.redirectErrorStream(true);
+            Process compileProcess = pb.start();
+            boolean completed = compileProcess.waitFor(10, TimeUnit.SECONDS);
+
+            if (!completed) {
+                compileProcess.destroyForcibly();
+                log.error("Compilation timeout for {}", language);
+                return false;
+            }
+
+            int exitCode = compileProcess.exitValue();
+            if (exitCode != 0) {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(compileProcess.getInputStream()));
+                StringBuilder error = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    error.append(line).append("\n");
+                }
+                reader.close();
+                log.error("Compilation failed for {}: {}", language, error);
+                return false;
+            }
+
+            return true;
+        } catch (Exception e) {
+            log.error("Compilation error for {}", language, e);
+            return false;
+        }
     }
 
     private String normalizeOutput(String output) {
