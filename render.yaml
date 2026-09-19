@@ -25,23 +25,23 @@ services:
       - key: REDIS_PASSWORD
         sync: false
       - key: PROBLEM_SERVICE_URL
-        value: https://codearena-problem-service.onrender.com
+        value: https://codearena-problem.onrender.com
       - key: SUBMISSION_SERVICE_URL
         value: https://codearena-submission-service.onrender.com
       - key: EXECUTION_SERVICE_URL
         value: https://codearena-execution-service.onrender.com
       - key: CONTEST_SERVICE_URL
-        value: https://codearena-contest-service.onrender.com
+        value: https://codearena-rmpu.onrender.com
       - key: AI_REVIEW_SERVICE_URL
         value: https://codearena-ai-review-service.onrender.com
       - key: WEBSOCKET_SERVICE_URL
         value: https://codearena-websocket-service.onrender.com
       - key: FRONTEND_URL
-        sync: false
+        value: https://codearena-vert.vercel.app
 
   # Problem Service (Java)
   - type: web
-    name: codearena-problem-service
+    name: codearena-problem
     runtime: docker
     dockerContext: ./services/problem-service
     dockerfilePath: ./services/problem-service/Dockerfile
@@ -159,11 +159,11 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: FRONTEND_URL
-        sync: false
+        value: https://codearena-vert.vercel.app
 
   # Contest Service (Java)
   - type: web
-    name: codearena-contest-service
+    name: codearena-rmpu
     runtime: docker
     dockerContext: ./services/contest-service
     dockerfilePath: ./services/contest-service/Dockerfile
