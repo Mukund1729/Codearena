@@ -59,7 +59,7 @@ services:
       - key: POSTGRES_DB
         value: postgres
       - key: POSTGRES_USER
-        value: postgres.dmttmadjkjydpjhgvnei
+        value: postgres
       - key: POSTGRES_PASSWORD
         sync: false
 
@@ -73,13 +73,13 @@ services:
       - key: PORT
         value: 3002
       - key: POSTGRES_HOST
-        sync: false
+        value: aws-0-ap-southeast-1.pooler.supabase.com
       - key: POSTGRES_PORT
         value: 5432
       - key: POSTGRES_DB
-        sync: false
+        value: postgres
       - key: POSTGRES_USER
-        sync: false
+        value: postgres
       - key: POSTGRES_PASSWORD
         sync: false
       - key: RABBITMQ_URL
@@ -113,7 +113,7 @@ services:
       - key: POSTGRES_DB
         value: postgres
       - key: POSTGRES_USER
-        value: postgres.dmttmadjkjydpjhgvnei
+        value: postgres
       - key: POSTGRES_PASSWORD
         sync: false
       - key: RABBITMQ_URL
@@ -181,7 +181,7 @@ services:
       - key: POSTGRES_DB
         value: postgres
       - key: POSTGRES_USER
-        value: postgres.dmttmadjkjydpjhgvnei
+        value: postgres
       - key: POSTGRES_PASSWORD
         sync: false
       - key: REDIS_URL
@@ -205,13 +205,13 @@ services:
       - key: PORT
         value: 3006
       - key: POSTGRES_HOST
-        sync: false
+        value: aws-0-ap-southeast-1.pooler.supabase.com
       - key: POSTGRES_PORT
         value: 5432
       - key: POSTGRES_DB
-        sync: false
+        value: postgres
       - key: POSTGRES_USER
-        sync: false
+        value: postgres
       - key: POSTGRES_PASSWORD
         sync: false
       - key: OPENAI_API_KEY
