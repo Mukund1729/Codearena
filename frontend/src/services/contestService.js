@@ -1,28 +1,28 @@
-import api from './api'
+import { contestApi } from './api'
 
 export const contestService = {
   getAllContests: async (params = {}) => {
-    const response = await api.get('/contests', { params })
+    const response = await contestApi.get('/contests', { params })
     return response.data
   },
 
   getContestById: async (id) => {
-    const response = await api.get(`/contests/${id}`)
+    const response = await contestApi.get(`/contests/${id}`)
     return response.data
   },
 
   getLeaderboard: async (contestId) => {
-    const response = await api.get(`/contests/${contestId}/leaderboard`)
+    const response = await contestApi.get(`/contests/${contestId}/leaderboard`)
     return response.data
   },
 
   getContestsByStatus: async (status) => {
-    const response = await api.get(`/contests/status/${status}`)
+    const response = await contestApi.get(`/contests/status/${status}`)
     return response.data
   },
 
   createContest: async (data) => {
-    const response = await api.post('/contests', data)
+    const response = await contestApi.post('/contests', data)
     return response.data
   }
 }

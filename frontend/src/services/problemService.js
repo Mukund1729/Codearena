@@ -1,4 +1,4 @@
-import api from './api'
+import { problemApi } from './api'
 
 function normalizeProblem(problem) {
   return {
@@ -32,17 +32,17 @@ export function problemIdToNumeric(id) {
 
 export const problemService = {
   getAllProblems: async (params = {}) => {
-    const response = await api.get('/auth/codeforces/problems', { params })
+    const response = await problemApi.get('/auth/codeforces/problems', { params })
     return normalizeList(response.data)
   },
 
   getKattisProblems: async (params = {}) => {
-    const response = await api.get('/auth/kattis/problems', { params })
+    const response = await problemApi.get('/auth/kattis/problems', { params })
     return normalizeList(response.data)
   },
 
   getPublishedProblems: async (params = {}) => {
-    const response = await api.get('/problems/published', { params })
+    const response = await problemApi.get('/problems/published', { params })
     const data = response.data
     if (Array.isArray(data)) {
       return normalizeList(data)
@@ -65,7 +65,7 @@ export const problemService = {
       endpoint = `/auth/codeforces/problems/${id}`
     }
 
-    const response = await api.get(endpoint)
+    const response = await problemApi.get(endpoint)
     if (!response.data) {
       throw new Error('Problem not found')
     }
@@ -73,17 +73,17 @@ export const problemService = {
   },
 
   searchProblems: async (filters) => {
-    const response = await api.get('/problems/search', { params: filters })
+    const response = await problemApi.get('/problems/search', { params: filters })
     return response.data
   },
 
   getInternalProblems: async (params = {}) => {
-    const response = await api.get('/problems', { params })
+    const response = await problemApi.get('/problems', { params })
     return response.data
   },
 
   createProblem: async (data) => {
-    const response = await api.post('/problems', data)
+    const response = await problemApi.post('/problems', data)
     return response.data
   }
 }
