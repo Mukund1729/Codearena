@@ -200,7 +200,7 @@ Repeat for:
 
 ---
 
-## Why this project belongs on your resume
+## Why this project belongs 
 
 - Demonstrates a **distributed microservices architecture** across Node.js and Java.
 - Shows experience with **real-time systems** using WebSockets and Redis.
